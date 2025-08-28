@@ -8,6 +8,8 @@ from discord.ext import commands
 with open("./config/config.json", "r", encoding="utf-8") as f:
     cfg = json.load(f)
 
+logging.basicConfig(level=logging.INFO)
+
 appeal_channel_id = int(cfg["appeal_channel_id"])
 guild_id = int(cfg["guild_id"])
 
@@ -16,18 +18,6 @@ mention_on_vacation = bool(cfg["mention_on_vacation"])
 
 judge_role_id = int(cfg["judge_role_id"])
 vacation_role_id = int(cfg["vacation_role_id"])
-user_id_for_send_logs = int(cfg["user_id_for_send_logs"])
-
-async def send_logs(time: str, thread_url: str, judges_mention: list):
-    judges_mention_names = ""
-
-    for member in judges_mention:
-        judges_mention_names += f"{member.name} : {member.id}\n"
-
-    logging.info(f"Создание нового обжалования")
-    logging.info(f"время: {time}, ссылка на публикацию: {thread_url}")
-    logging.info(f"было упомянуто: {len(judges_mention)} судей")
-    logging.info(f"список упомянутых судей:\n{judges_mention_names}")
 
 async def get_nicknames_without_vacation(members_with_judge: list, vacation_role_id: int) -> list:
     """ 
@@ -61,11 +51,10 @@ async def get_members_without_vacation(members_with_judge: list, vacation_role_i
 
     return members_without_vacation
 
-logging.basicConfig(level=logging.INFO)
-
 class JudgesMentionCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
+        self.logger = logging.getLogger(__name__)
 
     @commands.Cog.listener()
     async def on_thread_create(self, thread):
@@ -82,7 +71,7 @@ class JudgesMentionCog(commands.Cog):
         members_with_judge = [member for member in guild.members if judge_role in member.roles]
 
         if (not members_with_judge): 
-            logging.warning("Пользователей с ролью судья не обнаружено")
+            self.logger.warning("Пользователей с ролью судья не обнаружено")
             return
 
         mentions = "Пинг судей: "
@@ -103,4 +92,12 @@ class JudgesMentionCog(commands.Cog):
         await thread.send(mentions)
 
         thread_url = thread.jump_url
-        await send_logs(datetime.datetime.now(), thread_url, members_list)
+        judges_mention_names = ""
+
+        for member in members_list:
+            judges_mention_names += f"{member.name}:{member.id} "
+
+        self.logger.info(f"Создание нового обжалования")
+        self.logger.info(f"время: {datetime.datetime.now()}, ссылка на публикацию: {thread_url}")
+        self.logger.info(f"было упомянуто: {len(members_list)} судей")
+        self.logger.info(f"список упомянутых судей: {judges_mention_names}")
