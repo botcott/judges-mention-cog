@@ -1,3 +1,4 @@
+import os
 import json
 import datetime
 import logging
@@ -5,10 +6,8 @@ import logging
 import discord
 from discord.ext import commands
 
-with open("./config/config.json", "r", encoding="utf-8") as f:
+with open(f"{os.path.abspath(__file__)}/config/config.json", "r", encoding="utf-8") as f:
     cfg = json.load(f)
-
-logging.basicConfig(level=logging.INFO)
 
 appeal_channel_id = int(cfg["appeal_channel_id"])
 guild_id = int(cfg["guild_id"])
