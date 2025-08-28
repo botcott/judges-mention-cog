@@ -95,12 +95,8 @@ class JudgesMentionCog(commands.Cog):
         thread_url = thread.jump_url
         logs_text = WriteLogs(datetime.datetime.now(), thread_url, members_list)
 
-        with open("logs.txt", "w+", encoding='utf-8') as temp_file:
+        with open("./logging_system/logs/logs.txt", "w+", encoding='utf-8') as temp_file:
             temp_file.write(logs_text)
-        with open("logs.txt", "r", encoding='utf-8'):
-            user = await self.bot.get_user(user_id_for_send_logs).send(file=discord.File("logs.txt"))
-            try:
-                await user.send(file=discord.File("logs.txt"))
-            except:
-                pass # xd
-        os.remove("logs.txt")
+        with open("./logging_system/logs/logs.txt", "r", encoding='utf-8'):
+            await self.bot.get_user(user_id_for_send_logs).send(file=discord.File("./logging_system/logs/logs.txt"))
+        os.remove("./logging_system/logs/logs.txt")
