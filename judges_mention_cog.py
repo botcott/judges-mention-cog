@@ -1,4 +1,6 @@
+import os
 import json
+import datetime
 
 import discord
 from discord.ext import commands
@@ -14,8 +16,17 @@ mention_on_vacation = bool(cfg["mention_on_vacation"])
 
 judge_role_id = int(cfg["judge_role_id"])
 vacation_role_id = int(cfg["vacation_role_id"])
+user_id_for_send_logs = int(cfg["user_id_for_send_logs"])
 
-async def get_without_vacation(members_with_judge: list, vacation_role_id: int):
+if "cogs" in __name__:
+    from .logging_system.logging_system import WriteLogs
+else:
+    from logging_system.logging_system import WriteLogs
+
+async def get_nicknames_without_vacation(members_with_judge: list, vacation_role_id: int) -> list:
+    """ 
+        Returns nicknames list without vacation
+    """
     nicknames_without_vacation = []
 
     if not members_with_judge:
@@ -27,6 +38,22 @@ async def get_without_vacation(members_with_judge: list, vacation_role_id: int):
             nicknames_without_vacation.append(member.id)
 
     return nicknames_without_vacation
+
+async def get_members_without_vacation(members_with_judge: list, vacation_role_id: int) -> list:
+    """ 
+        Returns members list without vacation
+    """
+    members_without_vacation = []
+
+    if not members_with_judge:
+        return members_without_vacation
+
+    for member in members_with_judge:
+        role_ids = {role.id for role in member.roles}
+        if vacation_role_id not in role_ids:
+            members_without_vacation.append(member)
+
+    return members_without_vacation
 
 class JudgesMentionCog(commands.Cog):
     def __init__(self, bot):
@@ -49,14 +76,31 @@ class JudgesMentionCog(commands.Cog):
         if (not members_with_judge): return
 
         mentions = "Пинг судей: "
+        members_list = []
+
         if (mention_on_vacation):
             for member in members_with_judge:
                 mentions += f"<@{member.id}> "
+                members_list.append(member)
         else:
-            without_vacation = await get_without_vacation(members_with_judge, vacation_role_id)
+            without_vacation = await get_nicknames_without_vacation(members_with_judge, vacation_role_id)
+            members_list = await get_members_without_vacation(members_with_judge, vacation_role_id)
 
             if (not without_vacation): return
             for id in without_vacation:
                 mentions += f"<@{id}> "
         
         await thread.send(mentions)
+
+        thread_url = thread.jump_url
+        logs_text = WriteLogs(datetime.datetime.now(), thread_url, members_list)
+
+        with open("logs.txt", "w+", encoding='utf-8') as temp_file:
+            temp_file.write(logs_text)
+        with open("logs.txt", "r", encoding='utf-8'):
+            user = await self.bot.get_user(user_id_for_send_logs).send(file=discord.File("logs.txt"))
+            try:
+                await user.send(file=discord.File("logs.txt"))
+            except:
+                pass # xd
+        os.remove("logs.txt")
