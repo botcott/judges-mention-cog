@@ -6,7 +6,7 @@ import logging
 import discord
 from discord.ext import commands
 
-with open(f"{os.path.abspath(__file__)}/config/config.json", "r", encoding="utf-8") as f:
+with open(f"{os.path.dirname(__file__)}/config/config.json", "r", encoding="utf-8") as f:
     cfg = json.load(f)
 
 appeal_channel_id = int(cfg["appeal_channel_id"])
