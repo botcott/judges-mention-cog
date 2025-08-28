@@ -1,6 +1,6 @@
-import os
 import json
 import datetime
+import logging
 
 import discord
 from discord.ext import commands
@@ -18,10 +18,16 @@ judge_role_id = int(cfg["judge_role_id"])
 vacation_role_id = int(cfg["vacation_role_id"])
 user_id_for_send_logs = int(cfg["user_id_for_send_logs"])
 
-if "cogs" in __name__:
-    from .logging_system.logging_system import WriteLogs
-else:
-    from logging_system.logging_system import WriteLogs
+async def send_logs(time: str, thread_url: str, judges_mention: list):
+    judges_mention_names = ""
+
+    for member in judges_mention:
+        judges_mention_names += f"{member.name} : {member.id}\n"
+
+    logging.info(f"Создание нового обжалования")
+    logging.info(f"время: {time}, ссылка на публикацию: {thread_url}")
+    logging.info(f"было упомянуто: {len(judges_mention)} судей")
+    logging.info(f"список упомянутых судей:\n{judges_mention_names}")
 
 async def get_nicknames_without_vacation(members_with_judge: list, vacation_role_id: int) -> list:
     """ 
@@ -55,6 +61,8 @@ async def get_members_without_vacation(members_with_judge: list, vacation_role_i
 
     return members_without_vacation
 
+logging.basicConfig(level=logging.INFO)
+
 class JudgesMentionCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -73,7 +81,9 @@ class JudgesMentionCog(commands.Cog):
         judge_role = guild.get_role(judge_role_id)
         members_with_judge = [member for member in guild.members if judge_role in member.roles]
 
-        if (not members_with_judge): return
+        if (not members_with_judge): 
+            logging.warning("Пользователей с ролью судья не обнаружено")
+            return
 
         mentions = "Пинг судей: "
         members_list = []
@@ -93,10 +103,4 @@ class JudgesMentionCog(commands.Cog):
         await thread.send(mentions)
 
         thread_url = thread.jump_url
-        logs_text = WriteLogs(datetime.datetime.now(), thread_url, members_list)
-
-        with open("./logging_system/logs/logs.txt", "w+", encoding='utf-8') as temp_file:
-            temp_file.write(logs_text)
-        with open("./logging_system/logs/logs.txt", "r", encoding='utf-8'):
-            await self.bot.get_user(user_id_for_send_logs).send(file=discord.File("./logging_system/logs/logs.txt"))
-        os.remove("./logging_system/logs/logs.txt")
+        await send_logs(datetime.datetime.now(), thread_url, members_list)
