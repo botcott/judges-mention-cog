@@ -2,6 +2,7 @@ import os
 import json
 import datetime
 import logging
+import asyncio
 
 import discord
 from discord.ext import commands
@@ -87,7 +88,8 @@ class JudgesMentionCog(commands.Cog):
             if (not without_vacation): return
             for id in without_vacation:
                 mentions += f"<@{id}> "
-        
+
+        await asyncio.sleep(5)
         await thread.send(mentions)
 
         thread_url = thread.jump_url
