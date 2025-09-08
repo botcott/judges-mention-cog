@@ -1,8 +1,8 @@
 import os
+import re
 import json
 import datetime
 import logging
-import asyncio
 
 import discord
 from discord.ext import commands
@@ -62,15 +62,21 @@ class JudgesMentionCog(commands.Cog):
             This event is triggered when someone creates a post in the forum.
         """
 
+        check = ["перма дк", "пдк"]
+        message = await thread.fetch_message(thread.id)
         if (not enable_mention): return
         if (not isinstance(thread.parent, discord.ForumChannel)): return
         if (thread.parent.id != appeal_channel_id): return
+        
+        for word in check:
+            if (re.search(word, message.content.lower())):
+                self.logger.info("Создано обжалование с ПДК, пропуск")
+                return
 
         guild = self.bot.get_guild(guild_id)
         judge_role = guild.get_role(judge_role_id)
-        members_with_judge = [member for member in guild.members if judge_role in member.roles]
 
-        if (not members_with_judge): 
+        if (not judge_role.members): 
             self.logger.warning("Пользователей с ролью судья не обнаружено")
             return
 
@@ -78,18 +84,25 @@ class JudgesMentionCog(commands.Cog):
         members_list = []
 
         if (mention_on_vacation):
-            for member in members_with_judge:
+            for member in judge_role.members:
                 mentions += f"<@{member.id}> "
                 members_list.append(member)
         else:
-            without_vacation = await get_nicknames_without_vacation(members_with_judge, vacation_role_id)
-            members_list = await get_members_without_vacation(members_with_judge, vacation_role_id)
-
+            without_vacation = await get_nicknames_without_vacation(judge_role.members, vacation_role_id)
+            members_list = await get_members_without_vacation(judge_role.members, vacation_role_id)
+            
             if (not without_vacation): return
             for id in without_vacation:
                 mentions += f"<@{id}> "
 
-        await asyncio.sleep(5)
+        def check(message):
+            return message.channel == thread
+        
+        try:
+            await self.bot.wait_for('message', check=check, timeout=5.0)
+        except Exception as e:
+            self.logger.error(e)
+
         await thread.send(mentions)
 
         thread_url = thread.jump_url
