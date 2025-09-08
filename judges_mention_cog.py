@@ -102,6 +102,7 @@ class JudgesMentionCog(commands.Cog):
             await self.bot.wait_for('message', check=check, timeout=5.0)
         except Exception as e:
             self.logger.error(e)
+            return
 
         await thread.send(mentions)
 
